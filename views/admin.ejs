@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PropBot 🚨 ADMIN</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 40px 20px; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { margin-bottom: 40px; text-align: center; background: #fee2e2; padding: 20px; border-radius: 12px; border: 2px dashed #ef4444; }
+        h1 { margin: 0 0 10px 0; color: #991b1b; }
+        p.subtitle { color: #7f1d1d; font-size: 1.1rem; margin: 0; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
+        .card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .carousel-wrapper { position: relative; width: 100%; height: 220px; }
+        .media-container { width: 100%; height: 100%; background-color: #e2e8f0; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; scroll-behavior: smooth; }
+        .media-container::-webkit-scrollbar { display: none; }
+        .media-item { flex: 0 0 100%; height: 100%; object-fit: cover; scroll-snap-align: start; }
+        .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.85); border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 1.2rem; z-index: 10; }
+        .left-btn { left: 10px; } .right-btn { right: 10px; }
+        .card-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        .badge { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; margin-bottom: 12px; margin-right: 5px; }
+        .badge.sale { background: #fef08a; color: #854d0e; }
+        .title { font-size: 1.3rem; font-weight: 700; margin: 0 0 10px 0; color: #0f172a; }
+        .price { font-size: 1.4rem; font-weight: 800; color: #059669; margin: 0 0 15px 0; }
+        .meta-info { font-size: 0.9rem; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 15px; margin-top: 15px; flex-grow: 1; }
+        .delete-btn { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; transition: 0.2s; margin-top: 15px; }
+        .delete-btn:hover { background: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚨 ADMIN CONTROL PANEL</h1>
+            <p class="subtitle">Warning: Deleting properties here is permanent.</p>
+        </header>
+        <div class="grid">
+            <% if (properties.length === 0) { %>
+                <p style="text-align: center; grid-column: 1/-1; color: #64748b;">No listings in the database.</p>
+            <% } %>
+            <% properties.forEach(prop => { %>
+                <div class="card">
+                    <% const urls = (prop.mediaUrls && prop.mediaUrls.length > 0) ? prop.mediaUrls : (prop.mediaUrl ? [prop.mediaUrl] : []); %>
+                    <div class="carousel-wrapper">
+                        <% if (urls.length > 1) { %><button onclick="document.getElementById('gallery-<%= prop._id %>').scrollBy({left: -300})" class="nav-btn left-btn">❮</button><% } %>
+                        <div class="media-container" id="gallery-<%= prop._id %>">
+                            <% if (urls.length > 0) { %>
+                                <% urls.forEach(url => { %>
+                                    <% if (prop.mediaType === 'video') { %>
+                                        <video class="media-item" controls muted><source src="/proxy-media?url=<%= encodeURIComponent(url) %>"></video>
+                                    <% } else { %>
+                                        <img class="media-item" src="/proxy-media?url=<%= encodeURIComponent(url) %>">
+                                    <% } %>
+                                <% }) %>
+                            <% } else { %>
+                                <div style="font-size: 3rem; margin: auto;">🏢</div>
+                            <% } %>
+                        </div>
+                        <% if (urls.length > 1) { %><button onclick="document.getElementById('gallery-<%= prop._id %>').scrollBy({left: 300})" class="nav-btn right-btn">❯</button><% } %>
+                    </div>
+                    <div class="card-content">
+                        <div>
+                            <span class="badge sale"><%= prop.listingType || 'Rent' %></span>
+                            <span class="badge"><%= prop.furnishing || 'Standard' %></span>
+                            <span class="badge" style="background: #1e293b; color: white; float: right;">ID: <%= prop.shortId || 'N/A' %></span>
+                        </div>
+                        <div class="title"><%= prop.bhk || 'N/A' %> Flat</div>
+                        <div class="price">₹<%= prop.price ? prop.price.toLocaleString('en-IN') : 'N/A' %></div>
+                        <div class="meta-info">
+                            📍 <strong>Loc:</strong> <%= prop.location || 'N/A' %><br>
+                            📱 <strong>Num:</strong> <%= prop.whatsappNumber.replace('whatsapp:', '') %><br>
+                            🕒 <strong>Date:</strong> <%= new Date(prop.createdAt).toLocaleDateString() %>
+                        </div>
+                        <form action="/admin-delete/<%= prop._id %>" method="POST">
+                            <button type="submit" class="delete-btn">FORCE DELETE 🗑️</button>
+                        </form>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+</body>
+</html>
