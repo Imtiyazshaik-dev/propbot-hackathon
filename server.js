@@ -188,7 +188,7 @@ app.post('/webhook', async (req, res) => {
 
         let portfolioMsg = `📋 *Your Active Portfolio:*\n\n`;
         myProperties.forEach((p, index) => {
-            portfolioMsg += `*${index + 1}. ${p.bhk} in ${p.location}*\n💰 ₹${p.price.toLocaleString('en-IN')}\n🔗 Link: http://localhost:3000/property/${p.shortId}\n🗑️ Delete: Text "Sold ${p.shortId}"\n\n`;
+            portfolioMsg += `*${index + 1}. ${p.bhk} in ${p.location}*\n💰 ₹${p.price.toLocaleString('en-IN')}\n🔗 Link: https://${req.get('host')}/property/${p.shortId}\n🗑️ Delete: Text "Sold ${p.shortId}"\n\n`;
         });
         return res.status(200).send(`<Response><Message>${portfolioMsg}</Message></Response>`);
     }
@@ -235,7 +235,7 @@ app.post('/webhook', async (req, res) => {
         return res.status(200).send(`<Response><Message>${confirmMsg}</Message></Response>`);
     }
 
-    // 💸 🆕 OWNER SERVICE: Start Lease (Supports "Lease..." OR "Rented... to...")
+    // 💸 OWNER SERVICE: Start Lease (Supports "Lease..." OR "Rented... to...")
     if (textLower.startsWith('lease ') || (textLower.startsWith('rented ') && textLower.includes(' to '))) {
         const parts = incomingText.split(' ');
         if (parts.length >= 6 && parts[4].toLowerCase() === 'upi') {
@@ -267,7 +267,7 @@ app.post('/webhook', async (req, res) => {
         }
     }
 
-    // 🗑️ 🆕 OWNER SERVICE: Take Property Off Market (Supports Sold, Delete, or simple Rented)
+    // 🗑️ OWNER SERVICE: Take Property Off Market (Supports Sold, Delete, or simple Rented)
     if (textLower.startsWith('sold ') || textLower.startsWith('delete ') || (textLower.startsWith('rented ') && !textLower.includes(' to '))) {
         const codeToFind = incomingText.split(' ')[1].toUpperCase(); 
         const propertyToDelete = await Property.findOne({ shortId: codeToFind });
@@ -301,7 +301,7 @@ app.post('/webhook', async (req, res) => {
                                `Just send me some *Photos/Videos* 📸 followed by a *Voice Note* 🎤 detailing the Price, BHK, and Location.\n` +
                                `_Commands: "My listings", "Sold [ID]", "Rented [ID] to [Number] upi [UPI]", "Received [ID] [Amount]"_\n\n` +
                                `🔑 *Looking for a Home? (Tenants):*\n` +
-                               `Browse our live marketplace here: http://localhost:3000/listings\n`;
+                               `Browse our live marketplace here: https://${req.get('host')}/listings\n`;
         return res.status(200).send(`<Response><Message>${welcomeMessage}</Message></Response>`);
     }
 
@@ -347,7 +347,7 @@ app.post('/webhook', async (req, res) => {
 
             await twilioClient.messages.create({
                 from: req.body.To, to: senderNumber,
-                body: `🏠 *Listing Live!*\n\n📍 *${cleanData.bhk} in ${cleanData.location}*\n💰 ₹${cleanData.price.toLocaleString('en-IN')}\n\n🔗 *Share with clients:* http://localhost:3000/property/${generatedShortId}\n\n🔑 *Delete Code:* ${generatedShortId}`
+                body: `🏠 *Listing Live!*\n\n📍 *${cleanData.bhk} in ${cleanData.location}*\n💰 ₹${cleanData.price.toLocaleString('en-IN')}\n\n🔗 *Share with clients:* https://${req.get('host')}/property/${generatedShortId}\n\n🔑 *Delete Code:* ${generatedShortId}`
             });
         } else {
             await twilioClient.messages.create({
@@ -362,6 +362,11 @@ app.post('/webhook', async (req, res) => {
 // 5. PUBLIC WEB ROUTES
 // ==========================================
 app.set('view engine', 'ejs');
+
+// 🆕 FIX: Automatically redirect the main homepage to the listings page
+app.get('/', (req, res) => {
+    res.redirect('/listings');
+});
 
 app.get('/listings', async (req, res) => {
     try { const properties = await Property.find().sort({ createdAt: -1 }); res.render('index', { properties }); } 
@@ -437,4 +442,4 @@ cron.schedule('0 10 * * *', async () => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server listening on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server listening on port ${PORT}`));
