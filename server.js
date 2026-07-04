@@ -193,7 +193,7 @@ app.post('/webhook', async (req, res) => {
         return res.status(200).send(`<Response><Message>${portfolioMsg}</Message></Response>`);
     }
 
-    // 🧾 OWNER SERVICE: Generate Payment Receipt (Supports partial payments)
+    // 🧾 OWNER SERVICE: Generate Payment Receipt
     if (textLower.startsWith('received ')) {
         const parts = incomingText.split(' ');
         const shortId = parts[1].toUpperCase();
@@ -204,7 +204,6 @@ app.post('/webhook', async (req, res) => {
         if (!activeLease) return res.status(200).send(`<Response><Message>⚠️ No active lease found for property ${shortId}.</Message></Response>`);
         if (activeLease.ownerNumber !== senderNumber) return res.status(200).send(`<Response><Message>⛔ Security Error: Only the registered landlord can issue a receipt.</Message></Response>`);
         
-        // Smart Amount Logic
         let amountPaid = activeLease.rentAmount;
         if (parts.length >= 3 && !isNaN(parts[2])) {
             amountPaid = parseInt(parts[2]);
@@ -235,13 +234,12 @@ app.post('/webhook', async (req, res) => {
         return res.status(200).send(`<Response><Message>${confirmMsg}</Message></Response>`);
     }
 
-    // 💸 OWNER SERVICE: Start Lease (Supports "Lease..." OR "Rented... to...")
+    // 💸 OWNER SERVICE: Start Lease
     if (textLower.startsWith('lease ') || (textLower.startsWith('rented ') && textLower.includes(' to '))) {
         const parts = incomingText.split(' ');
         if (parts.length >= 6 && parts[4].toLowerCase() === 'upi') {
             const shortId = parts[1].toUpperCase();
             
-            // Auto-Format the Tenant Number
             let tenantNum = parts[3]; 
             if (!tenantNum.startsWith('+91') && !tenantNum.startsWith('+')) {
                 tenantNum = '+91' + tenantNum;
@@ -267,7 +265,7 @@ app.post('/webhook', async (req, res) => {
         }
     }
 
-    // 🗑️ OWNER SERVICE: Take Property Off Market (Supports Sold, Delete, or simple Rented)
+    // 🗑️ OWNER SERVICE: Take Property Off Market
     if (textLower.startsWith('sold ') || textLower.startsWith('delete ') || (textLower.startsWith('rented ') && !textLower.includes(' to '))) {
         const codeToFind = incomingText.split(' ')[1].toUpperCase(); 
         const propertyToDelete = await Property.findOne({ shortId: codeToFind });
@@ -340,7 +338,9 @@ app.post('/webhook', async (req, res) => {
                 shortId: generatedShortId, whatsappNumber: senderNumber, bhk: cleanData.bhk,
                 price: cleanData.price, listingType: cleanData.listingType, location: cleanData.location,
                 furnishing: cleanData.furnishing, description: cleanData.description, 
-                mediaUrls: finalMediaUrls, mediaType: finalMediaUrls.length > 0 ? 'image' : 'audio'
+                mediaUrl: finalMediaUrls[0], // <--- BUG FIX: Saves the first photo for the frontend
+                mediaUrls: finalMediaUrls, 
+                mediaType: finalMediaUrls.length > 0 ? 'image' : 'audio'
             });
             await newProperty.save();
             pendingListings.delete(senderNumber);
@@ -363,7 +363,7 @@ app.post('/webhook', async (req, res) => {
 // ==========================================
 app.set('view engine', 'ejs');
 
-// 🆕 FIX: Automatically redirect the main homepage to the listings page
+// Redirect the main homepage to the listings page
 app.get('/', (req, res) => {
     res.redirect('/listings');
 });
